@@ -1,0 +1,32 @@
+<idea-plugin>
+  <idea-version since-build="251" />
+  <id>com.adkhambek.viewbinding.idea</id>
+  <name>ViewBinding</name>
+  <version>1.0.0</version>
+  <vendor>adkhambek</vendor>
+  <description><![CDATA[IDE support for the ViewBinding compiler plugin.
+        <ul>
+            <li>Resolves the generated <code>binding</code> property for <code>@Screen</code>-annotated Fragment classes</li>
+            <li>Gutter icon on <code>@Screen</code> classes showing the generated binding property</li>
+            <li>Quick documentation (Ctrl+Q) for the generated <code>binding</code> property</li>
+            <li>Inspection warning when manually defining a binding property that conflicts with the generated one</li>
+        </ul>]]></description>
+  <change-notes><![CDATA[<b>1.0.0</b>
+        <ul>
+            <li>Bundled FIR compiler plugin provider for K2 analysis</li>
+            <li>Gutter icon line marker for @Screen classes</li>
+            <li>Documentation provider for the generated binding property</li>
+            <li>Inspection for conflicting manual binding definitions</li>
+        </ul>]]></change-notes>
+  <depends>com.intellij.modules.platform</depends>
+  <depends>org.jetbrains.kotlin</depends>
+  <extensions defaultExtensionNs="org.jetbrains.kotlin">
+    <bundledFirCompilerPluginProvider implementation="com.adkhambek.viewbinding.idea.ViewBindingBundledCompilerPluginProvider" />
+    <supportsKotlinPluginMode supportsK1="false" supportsK2="true" />
+  </extensions>
+  <extensions defaultExtensionNs="com.intellij">
+    <codeInsight.lineMarkerProvider language="kotlin" implementationClass="com.adkhambek.viewbinding.idea.ViewBindingLineMarkerProvider" />
+    <lang.documentationProvider language="kotlin" implementationClass="com.adkhambek.viewbinding.idea.ViewBindingDocumentationProvider" />
+    <localInspection language="kotlin" shortName="ViewBindingManualBinding" displayName="Manual binding property conflicts with ViewBinding generated property" groupName="ViewBinding" enabledByDefault="true" level="WARNING" implementationClass="com.adkhambek.viewbinding.idea.ViewBindingManualBindingInspection" />
+  </extensions>
+</idea-plugin>
