@@ -2,6 +2,8 @@
 
 A Kotlin K2 compiler plugin that generates companion object constants and utilities for Android Fragment classes annotated with `@Screen`.
 
+(⚠️ not published yet)
+
 ## Features
 
 - Generates `const val KEY` in the companion object, set to the fully qualified class name
