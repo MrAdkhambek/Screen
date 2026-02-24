@@ -33,6 +33,8 @@ maven-publish = { module = "com.vanniktech.maven.publish:com.vanniktech.maven.pu
 kotlin-jvm = { id = "org.jetbrains.kotlin.jvm", version.ref = "kotlin" }
 kotlin-android = { id = "org.jetbrains.kotlin.android", version.ref = "kotlin" }
 android-application = { id = "com.android.application", version.ref = "agp" }
+
 screen = { id = "com.adkhambek.screen" }
 viewbinding = { id = "com.adkhambek.viewbinding" }
+
 maven-publish = { id = "com.vanniktech.maven.publish", version.ref = "maven-publish" }

@@ -21,14 +21,6 @@ android {
     buildFeatures.viewBinding = true
 }
 
-// Substitute Maven artifacts with local projects
-configurations.all {
-    resolutionStrategy.dependencySubstitution {
-        substitute(module("com.adkhambek:screen-compiler")).using(project(":screen-compiler"))
-        substitute(module("com.adkhambek:viewbinding-compiler")).using(project(":viewbinding-compiler"))
-    }
-}
-
 dependencies {
     implementation(project(":screen-annotations"))
     implementation(libs.androidx.core)

@@ -25,4 +25,4 @@ rootProject.name = "screen"
 include(":screen-annotations")
 include(":screen-compiler")
 include(":viewbinding-compiler")
-include(":app")
+//include(":app")
