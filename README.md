@@ -2,7 +2,58 @@
 
 A Kotlin K2 compiler plugin that generates companion object constants and utilities for Android Fragment classes annotated with `@Screen`.
 
-(⚠️ not published yet)
+[![Maven Central](https://img.shields.io/maven-central/v/com.adkhambek.screen/screen-annotations)](https://central.sonatype.com/namespace/com.adkhambek.screen)
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
+
+| Tool   | Version |
+|--------|---------|
+| Kotlin | 2.3.10  |
+| Java   | 21      |
+| AGP    | 8.13.0  |
+| Gradle | 9.3.1   |
+
+## Installation
+
+### Screen Plugin
+
+```kotlin
+// settings.gradle.kts
+pluginManagement {
+    repositories {
+        mavenCentral()
+        gradlePluginPortal()
+    }
+}
+```
+
+```kotlin
+// build.gradle.kts
+plugins {
+    id("com.adkhambek.screen") version "<latest version>"
+}
+
+dependencies {
+    implementation("com.adkhambek.screen:screen-annotations:<latest version>")
+}
+```
+
+### ViewBinding Plugin
+
+```kotlin
+plugins {
+    id("com.adkhambek.viewbinding") version "<latest version>"
+}
+```
+
+### Maven Coordinates
+
+| Artifact                  | Coordinates                                                              |
+|---------------------------|--------------------------------------------------------------------------|
+| Screen Annotations        | `com.adkhambek.screen:screen-annotations:<latest version>`               |
+| Screen Compiler           | `com.adkhambek.screen:screen-compiler:<latest version>`                  |
+| Screen Gradle Plugin      | `com.adkhambek.screen:screen-gradle-plugin:<latest version>`             |
+| ViewBinding Compiler      | `com.adkhambek.viewbinding:viewbinding-compiler:<latest version>`        |
+| ViewBinding Gradle Plugin | `com.adkhambek.viewbinding:viewbinding-gradle-plugin:<latest version>`   |
 
 ## Features
 
@@ -15,16 +66,16 @@ A Kotlin K2 compiler plugin that generates companion object constants and utilit
 
 ## Modules
 
-| Module | Description |
-|---|---|
-| `screen-annotations` | `@Screen` annotation |
-| `screen-compiler` | K2 compiler plugin (FIR + IR) |
-| `screen-gradle-plugin` | Gradle plugin to apply the compiler plugin |
-| `screen-idea-plugin` | IntelliJ IDEA plugin for IDE support |
-| `viewbinding-compiler` | ViewBinding K2 compiler plugin |
-| `viewbinding-gradle-plugin` | ViewBinding Gradle plugin |
-| `viewbinding-idea-plugin` | ViewBinding IntelliJ IDEA plugin |
-| `app` | Sample Android application |
+| Module                      | Description                                |
+|-----------------------------|--------------------------------------------|
+| `screen-annotations`        | `@Screen` annotation                       |
+| `screen-compiler`           | K2 compiler plugin (FIR + IR)              |
+| `screen-gradle-plugin`      | Gradle plugin to apply the compiler plugin |
+| `screen-idea-plugin`        | IntelliJ IDEA plugin for IDE support       |
+| `viewbinding-compiler`      | ViewBinding K2 compiler plugin             |
+| `viewbinding-gradle-plugin` | ViewBinding Gradle plugin                  |
+| `viewbinding-idea-plugin`   | ViewBinding IntelliJ IDEA plugin           |
+| `app`                       | Sample Android application                 |
 
 ## Usage
 
@@ -64,25 +115,6 @@ class SampleFragment : Fragment(R.layout.fragment_sample) {
         Toast.makeText(requireContext(), arg.id.toString(), Toast.LENGTH_LONG).show()
     }
 }
-```
-
-## Requirements
-
-- Kotlin 2.3.0+
-- JDK 21+
-- Android Gradle Plugin (for the sample app)
-
-## Building
-
-```bash
-./gradlew build
-```
-
-## Running Tests
-
-```bash
-./gradlew :screen-compiler:test
-./gradlew :viewbinding-compiler:test
 ```
 
 ## License
