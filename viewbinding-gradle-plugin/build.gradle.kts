@@ -1,7 +1,7 @@
 plugins {
     `java-gradle-plugin`
     kotlin("jvm") version "2.3.0"
-    id("com.vanniktech.maven.publish") version "0.30.0"
+    id("com.vanniktech.maven.publish") version "0.36.0"
 }
 
 repositories {
@@ -9,7 +9,7 @@ repositories {
 }
 
 dependencies {
-    implementation("org.jetbrains.kotlin:kotlin-gradle-plugin-api:2.3.0")
+    implementation("org.jetbrains.kotlin:kotlin-gradle-plugin-api:2.3.10")
 }
 
 gradlePlugin {
@@ -22,7 +22,7 @@ gradlePlugin {
 }
 
 mavenPublishing {
-    publishToMavenCentral(com.vanniktech.maven.publish.SonatypeHost.CENTRAL_PORTAL)
+    publishToMavenCentral()
     signAllPublications()
 }
 
