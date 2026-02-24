@@ -2,8 +2,9 @@ name: Publish Libraries to Maven Central
 
 on:
   workflow_dispatch:
-  release:
-    types: [ published ]
+  push:
+    tags:
+      - 'v*'
 
 jobs:
   publish-libraries:
