@@ -1,10 +1,7 @@
 plugins {
     kotlin("jvm")
-    `maven-publish`
+    id("publishing-convention")
 }
-
-group = "com.adkhambek"
-version = "1.0-SNAPSHOT"
 
 repositories {
     mavenCentral()
@@ -12,14 +9,6 @@ repositories {
 
 dependencies {
     implementation(kotlin("stdlib"))
-}
-
-publishing {
-    publications {
-        create<MavenPublication>("maven") {
-            from(components["java"])
-        }
-    }
 }
 
 kotlin {

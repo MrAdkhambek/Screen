@@ -1,11 +1,8 @@
 plugins {
     `java-gradle-plugin`
-    `maven-publish`
     kotlin("jvm") version "2.3.0"
+    id("com.vanniktech.maven.publish") version "0.30.0"
 }
-
-group = "com.adkhambek"
-version = "1.0-SNAPSHOT"
 
 repositories {
     mavenCentral()

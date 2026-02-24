@@ -1,10 +1,7 @@
 plugins {
     kotlin("jvm")
-    `maven-publish`
+    id("publishing-convention")
 }
-
-group = "com.adkhambek"
-version = "1.0-SNAPSHOT"
 
 repositories {
     mavenCentral()
@@ -20,14 +17,6 @@ dependencies {
     testRuntimeOnly("org.junit.platform:junit-platform-launcher")
     testImplementation(kotlin("compiler-embeddable"))
     testImplementation(project(":screen-annotations"))
-}
-
-publishing {
-    publications {
-        create<MavenPublication>("maven") {
-            from(components["java"])
-        }
-    }
 }
 
 kotlin {

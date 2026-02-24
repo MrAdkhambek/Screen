@@ -1,4 +1,5 @@
 pluginManagement {
+    includeBuild("build-logic")
     includeBuild("screen-gradle-plugin")
     includeBuild("viewbinding-gradle-plugin")
     repositories {
