@@ -21,6 +21,11 @@ gradlePlugin {
     }
 }
 
+mavenPublishing {
+    publishToMavenCentral(com.vanniktech.maven.publish.SonatypeHost.CENTRAL_PORTAL)
+    signAllPublications()
+}
+
 kotlin {
     jvmToolchain(21)
 }
