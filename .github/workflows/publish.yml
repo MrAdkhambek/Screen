@@ -26,8 +26,11 @@ jobs:
 
       - uses: gradle/actions/setup-gradle@v4
 
-      - name: Publish libraries (annotations, compilers)
-        run: ./gradlew publishAllPublicationsToMavenCentralRepository
+      - name: Publish screen libraries (annotations, compiler)
+        run: ./gradlew :screen-annotations:publishAllPublicationsToMavenCentralRepository :screen-compiler:publishAllPublicationsToMavenCentralRepository
+
+      - name: Publish viewbinding-compiler
+        run: ./gradlew :viewbinding-compiler:publishAllPublicationsToMavenCentralRepository
 
       - name: Publish screen-gradle-plugin
         working-directory: screen-gradle-plugin
