@@ -109,36 +109,30 @@ class ScreenClassChecker : FirClassChecker(MppCheckerKind.Common) {
             val argSymbol = session.symbolProvider.getClassLikeSymbolByClassId(argClassId)
                 as? FirRegularClassSymbol
             if (argSymbol != null) {
-                // Ensure the arg class's supertypes are resolved before checking them.
-                argSymbol.lazyResolveToPhase(FirResolvePhase.SUPER_TYPES)
-                // Check if any of the arg class's supertypes is Parcelable.
-                val implementsParcelable = argSymbol.resolvedSuperTypes.any { superType ->
-                    superType.classId == PARCELABLE_CLASS_ID
-                }
-                // Report an error if the arg class doesn't implement Parcelable.
-                if (!implementsParcelable) {
+                // Recursively check if the arg class implements Parcelable anywhere in its hierarchy.
+                if (!isSubclassOf(argClassId, PARCELABLE_CLASS_ID, context)) {
                     reporter.reportOn(declaration.source, ScreenErrors.SCREEN_ARG_NOT_PARCELABLE)
                 }
             }
         }
     }
 
-    // Recursively checks whether a class identified by classId is Fragment or a subclass of Fragment.
-    // This handles deep inheritance chains (e.g., MyFragment -> BaseFragment -> Fragment).
-    private fun isFragmentSubclass(classId: ClassId, context: CheckerContext): Boolean {
-        // Base case: the classId is exactly Fragment.
-        if (classId == FRAGMENT_CLASS_ID) return true
-        // Look up the class symbol; return false if not found (e.g., external unresolved class).
+    // Recursively checks whether a class identified by classId is a subclass of (or equals) targetId.
+    // This handles deep inheritance chains by walking the full supertype hierarchy.
+    @OptIn(SymbolInternals::class)
+    private fun isSubclassOf(classId: ClassId, targetId: ClassId, context: CheckerContext): Boolean {
+        if (classId == targetId) return true
         val symbol = context.session.symbolProvider.getClassLikeSymbolByClassId(classId)
             as? FirRegularClassSymbol ?: return false
-        // Ensure supertypes are resolved before accessing them.
         symbol.lazyResolveToPhase(FirResolvePhase.SUPER_TYPES)
-        // Recursively check each supertype.
         return symbol.resolvedSuperTypes.any { superType ->
             val superClassId = superType.classId ?: return@any false
-            isFragmentSubclass(superClassId, context)
+            isSubclassOf(superClassId, targetId, context)
         }
     }
+
+    private fun isFragmentSubclass(classId: ClassId, context: CheckerContext): Boolean =
+        isSubclassOf(classId, FRAGMENT_CLASS_ID, context)
 
     // Resolves the ClassId of the arg parameter from the @Screen annotation expression.
     // The arg value can appear in different FIR expression forms depending on the resolution phase:
