@@ -4,7 +4,7 @@ plugins {
 }
 
 group = "com.adkhambek"
-version = "1.0.0"
+version = "1.1.0"
 
 repositories {
     mavenCentral()
@@ -15,7 +15,12 @@ repositories {
 
 dependencies {
     intellijPlatform {
-        local("/Applications/Android Studio.app")
+        val localPath = "/Applications/Android Studio.app"
+        if (file(localPath).exists()) {
+            local(localPath)
+        } else {
+            androidStudio("2024.3.2.14")
+        }
         bundledPlugin("org.jetbrains.kotlin")
     }
     implementation(files("libs/viewbinding-compiler.jar"))
@@ -29,7 +34,7 @@ intellijPlatform {
     pluginConfiguration {
         id = "com.adkhambek.viewbinding.idea"
         name = "ViewBinding"
-        version = "1.0.0"
+        version = "1.1.0"
         ideaVersion {
             sinceBuild = "251"
         }
