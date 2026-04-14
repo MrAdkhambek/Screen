@@ -295,6 +295,31 @@ class ScreenIrGenerationTest {
         }
 
         @Test
+        fun `nested inner fragment uses dollar-separated binary name in createScreen`() {
+            val source = SourceFile.kotlin(
+                "OuterFragment.kt",
+                """
+                package com.example
+
+                import com.adkhambek.screen.Screen
+                import androidx.fragment.app.Fragment
+
+                class Outer {
+                    @Screen
+                    class InnerFragment : Fragment()
+                }
+                """,
+            )
+            val result = compileWithScreenPlugin(source)
+            assertEquals(KotlinCompilation.ExitCode.OK, result.exitCode)
+            // The KEY should use dots (it's a bundle key, not a class name)
+            val key = readKeyValue(result, "com.example.Outer\$InnerFragment")
+            assertNotNull(key)
+            // Verify createScreen exists on the companion
+            assertTrue(hasMethod(result, "com.example.Outer\$InnerFragment", "createScreen"))
+        }
+
+        @Test
         fun `Fragment subclass in nested package has correct KEY`() {
             val source = SourceFile.kotlin(
                 "DetailFragment.kt",
