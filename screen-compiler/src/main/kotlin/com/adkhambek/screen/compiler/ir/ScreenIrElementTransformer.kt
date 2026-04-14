@@ -1,6 +1,3 @@
-// Suppress INVISIBLE_MEMBER warnings for accessing internal Kotlin compiler APIs.
-@file:Suppress("INVISIBLE_MEMBER")
-
 // Package declaration for the IR phase of the Screen compiler plugin.
 package com.adkhambek.screen.compiler.ir
 
@@ -244,6 +241,9 @@ class ScreenIrElementTransformer(
         val bundleType = pluginContext.referenceClass(BUNDLE_CLASS_ID)!!.owner.defaultType
 
         // Build the getter body using the DeclarationIrBuilder DSL.
+        // DeclarationIrBuilder is an internal Kotlin compiler API used to construct IR
+        // expression trees scoped to a specific declaration symbol.
+        @Suppress("INVISIBLE_MEMBER")
         getter.body = DeclarationIrBuilder(pluginContext, getter.symbol).irBlockBody {
             // val arguments = requireNotNull(this.getArguments())
             // Calls Fragment.getArguments() and wraps it in requireNotNull() to assert non-null.
@@ -429,6 +429,9 @@ class ScreenIrElementTransformer(
             val factoryParam = addValueParameter("factory", fragmentFactoryType)
 
             // Build the lambda body.
+            // DeclarationIrBuilder is an internal Kotlin compiler API used here to build
+            // the Creator lambda body that instantiates the fragment via FragmentFactory.
+            @Suppress("INVISIBLE_MEMBER")
             body = DeclarationIrBuilder(pluginContext, symbol).irBlockBody {
                 // val javaClass = Class.forName("com.example.MyFragment")
                 // Gets the java.lang.Class for the fragment using its FQN.
@@ -526,6 +529,9 @@ class ScreenIrElementTransformer(
 
         // Build the function body: return FragmentScreen(key, clearContainer, creator)
         // Uses irSamConversion to convert the lambda into the Creator SAM interface.
+        // DeclarationIrBuilder is an internal Kotlin compiler API used here to build
+        // the createScreen() function body that returns a FragmentScreen instance.
+        @Suppress("INVISIBLE_MEMBER")
         declaration.body = DeclarationIrBuilder(pluginContext, declaration.symbol).irBlockBody {
             // Convert the lambda to a Creator<FragmentFactory, Fragment> SAM instance.
             val samExpr = irSamConversion(lambdaExpr, creatorType)
