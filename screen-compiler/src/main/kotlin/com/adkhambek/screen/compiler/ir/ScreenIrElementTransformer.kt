@@ -7,6 +7,10 @@ import com.adkhambek.screen.compiler.fir.ScreenDeclarationKey
 import org.jetbrains.kotlin.backend.common.extensions.IrPluginContext
 // Import DeclarationIrBuilder which provides a DSL for building IR expression trees.
 import org.jetbrains.kotlin.backend.common.lower.DeclarationIrBuilder
+// Import CompilerMessageSeverity for specifying the severity level of diagnostic messages.
+import org.jetbrains.kotlin.cli.common.messages.CompilerMessageSeverity
+// Import MessageCollector for reporting diagnostic messages during the IR phase.
+import org.jetbrains.kotlin.cli.common.messages.MessageCollector
 // Import DescriptorVisibilities for setting visibility of generated IR declarations.
 import org.jetbrains.kotlin.descriptors.DescriptorVisibilities
 // Import Modality for setting modality (FINAL, OPEN, ABSTRACT) of generated IR declarations.
@@ -141,7 +145,16 @@ private fun regularParameterCount(params: List<org.jetbrains.kotlin.ir.declarati
 @OptIn(UnsafeDuringIrConstructionAPI::class)
 class ScreenIrElementTransformer(
     private val pluginContext: IrPluginContext,
+    private val messageCollector: MessageCollector,
 ) : IrElementTransformerVoid() {
+
+    // Reports a missing symbol and returns Unit, allowing callers to use `return reportMissing(...)`.
+    private fun reportMissing(symbolName: String, context: String) {
+        messageCollector.report(
+            CompilerMessageSeverity.ERROR,
+            "Screen plugin: cannot resolve $symbolName; skipping code generation for $context",
+        )
+    }
 
     // Visits property declarations and generates bodies for plugin-generated properties.
     // Handles two properties:
@@ -203,13 +216,18 @@ class ScreenIrElementTransformer(
         val returnType = getter.returnType
         // Check if the return type is nullable (from @Screen(isNullable = true)).
         val isNullable = returnType.isNullable()
+        val context = "arg getter on ${parentClass.kotlinFqName}"
 
+        // Resolve all required symbols upfront. If any are missing, report and skip generation.
+        val argClassSymbol = returnType.classOrNull
+            ?: return reportMissing("arg type class for ${returnType}", context)
         // Get the FQN of the arg class for Class.forName() and the parent class FQN for the Bundle key.
-        val argClassFqn = returnType.classOrNull!!.owner.kotlinFqName.asString()
+        val argClassFqn = argClassSymbol.owner.kotlinFqName.asString()
         val argKeyValue = parentClass.kotlinFqName.asString()
 
         // Resolve Fragment.getArguments() function symbol.
-        val fragmentClass = pluginContext.referenceClass(FRAGMENT_CLASS_ID)!!
+        val fragmentClass = pluginContext.referenceClass(FRAGMENT_CLASS_ID)
+            ?: return reportMissing("androidx.fragment.app.Fragment", context)
         val getArgumentsFn = fragmentClass.owner.functions.first {
             it.name.asString() == "getArguments"
         }
@@ -224,13 +242,15 @@ class ScreenIrElementTransformer(
 
         // Resolve BundleCompat.getParcelable(Bundle, String, Class) — the 3-parameter overload.
         // This is the AndroidX-compatible way to read Parcelable objects from a Bundle.
-        val bundleCompatClass = pluginContext.referenceClass(BUNDLE_COMPAT_CLASS_ID)!!
+        val bundleCompatClass = pluginContext.referenceClass(BUNDLE_COMPAT_CLASS_ID)
+            ?: return reportMissing("androidx.core.os.BundleCompat", context)
         val getParcelableFn = bundleCompatClass.owner.functions.first {
             it.name.asString() == "getParcelable" && regularParameterCount(it.parameters) == 3
         }
 
         // Resolve Class.forName(String) to get the java.lang.Class object for the arg type.
-        val javaLangClass = pluginContext.referenceClass(JAVA_CLASS_ID)!!
+        val javaLangClass = pluginContext.referenceClass(JAVA_CLASS_ID)
+            ?: return reportMissing("java.lang.Class", context)
         val forNameFn = javaLangClass.owner.functions.first {
             it.name.asString() == "forName" && regularParameterCount(it.parameters) == 1
         }
@@ -238,7 +258,9 @@ class ScreenIrElementTransformer(
         // Get the 'this' parameter for dispatching method calls on the fragment instance.
         val thisParam = getter.parameters.first()
         // Get the Bundle type for the requireNotNull call's type argument.
-        val bundleType = pluginContext.referenceClass(BUNDLE_CLASS_ID)!!.owner.defaultType
+        val bundleClassSymbol = pluginContext.referenceClass(BUNDLE_CLASS_ID)
+            ?: return reportMissing("android.os.Bundle", context)
+        val bundleType = bundleClassSymbol.owner.defaultType
 
         // Build the getter body using the DeclarationIrBuilder DSL.
         // DeclarationIrBuilder is an internal Kotlin compiler API used to construct IR
@@ -377,22 +399,28 @@ class ScreenIrElementTransformer(
         val clearContainerParam =
             declaration.parameters.first { it.name.asString() == "clearContainer" }
         val hasArg = argParam != null
+        val context = "createScreen() on $fqName"
 
-        // Resolve Cicerone symbols needed for the function body.
+        // Resolve all required symbols upfront. If any are missing, report and skip generation.
         // FragmentScreen class and its companion's invoke() function.
-        val fragmentScreenClass = pluginContext.referenceClass(FRAGMENT_SCREEN_CLASS_ID)!!
-        val fragmentScreenCompanion = fragmentScreenClass.owner.companionObject()!!
+        val fragmentScreenClass = pluginContext.referenceClass(FRAGMENT_SCREEN_CLASS_ID)
+            ?: return reportMissing("com.github.terrakok.cicerone.androidx.FragmentScreen", context)
+        val fragmentScreenCompanion = fragmentScreenClass.owner.companionObject()
+            ?: return reportMissing("FragmentScreen.Companion", context)
         // FragmentScreen.invoke(key, clearContainer, creator) — the 3-parameter overload.
         val invokeFunction = fragmentScreenCompanion.functions.first {
             it.name.asString() == "invoke" && regularParameterCount(it.parameters) == 3
         }
 
         // Creator is the SAM interface that provides a lambda for fragment instantiation.
-        val creatorClass = pluginContext.referenceClass(CREATOR_CLASS_ID)!!
+        val creatorClass = pluginContext.referenceClass(CREATOR_CLASS_ID)
+            ?: return reportMissing("com.github.terrakok.cicerone.androidx.Creator", context)
         // FragmentFactory is passed to the creator lambda to instantiate fragments.
-        val fragmentFactoryClass = pluginContext.referenceClass(FRAGMENT_FACTORY_CLASS_ID)!!
+        val fragmentFactoryClass = pluginContext.referenceClass(FRAGMENT_FACTORY_CLASS_ID)
+            ?: return reportMissing("androidx.fragment.app.FragmentFactory", context)
         // Fragment is the return type of the creator lambda.
-        val fragmentClass = pluginContext.referenceClass(FRAGMENT_CLASS_ID)!!
+        val fragmentClass = pluginContext.referenceClass(FRAGMENT_CLASS_ID)
+            ?: return reportMissing("androidx.fragment.app.Fragment", context)
 
         val fragmentFactoryType = fragmentFactoryClass.owner.defaultType
         val fragmentType = fragmentClass.owner.defaultType
@@ -403,13 +431,36 @@ class ScreenIrElementTransformer(
         }
 
         // Resolve java.lang.Class.forName(String) and getClassLoader() for classloader access.
-        val javaLangClass = pluginContext.referenceClass(JAVA_CLASS_ID)!!
+        val javaLangClass = pluginContext.referenceClass(JAVA_CLASS_ID)
+            ?: return reportMissing("java.lang.Class", context)
         val forNameFn = javaLangClass.owner.functions.first {
             it.name.asString() == "forName" && regularParameterCount(it.parameters) == 1
         }
         val getClassLoaderFn = javaLangClass.owner.functions.first {
             it.name.asString() == "getClassLoader" && it.parameters.none { p -> p.kind == IrParameterKind.Regular }
         }
+
+        // Pre-resolve arg-specific symbols. These are only used when hasArg is true, but are
+        // resolved here so that missing classpath entries are caught before building any IR.
+        val argBundleClass = if (hasArg) {
+            pluginContext.referenceClass(BUNDLE_CLASS_ID)
+                ?: return reportMissing("android.os.Bundle", context)
+        } else null
+        val argBundleConstructor = argBundleClass?.owner?.constructors?.first {
+            it.parameters.size == 1 && it.parameters[0].type.isInt()
+        }
+        val argPutParcelableFn = argBundleClass?.owner?.functions?.first {
+            it.name.asString() == "putParcelable" && regularParameterCount(it.parameters) == 2
+        }
+        val argKeyBackingField = if (hasArg) {
+            val keyProperty = companionClass.properties.firstOrNull { it.name.asString() == "KEY" }
+                ?: return reportMissing("KEY property on companion", context)
+            keyProperty.backingField
+                ?: return reportMissing("KEY property backing field", context)
+        } else null
+        val argSetArgumentsFn = if (hasArg) {
+            fragmentClass.owner.functions.first { it.name.asString() == "setArguments" }
+        } else null
 
         // Build the Creator SAM type: Creator<FragmentFactory, Fragment>.
         val creatorType = creatorClass.typeWith(fragmentFactoryType, fragmentType)
@@ -464,12 +515,15 @@ class ScreenIrElementTransformer(
                     // val fragment = factory.instantiate(...)
                     val fragmentVar = irTemporary(instantiateExpr, nameHint = "fragment")
 
+                    // Use pre-resolved arg symbols (guaranteed non-null when hasArg is true,
+                    // since we returned early above if resolution failed).
+                    val bundleConstructor = argBundleConstructor ?: return@irBlockBody
+                    val putParcelableFn = argPutParcelableFn ?: return@irBlockBody
+                    val keyBackingField = argKeyBackingField ?: return@irBlockBody
+                    val setArgumentsFn = argSetArgumentsFn ?: return@irBlockBody
+
                     // val bundle = Bundle(1)
                     // Create a new Bundle with initial capacity of 1 (for the single arg).
-                    val bundleClass = pluginContext.referenceClass(BUNDLE_CLASS_ID)!!
-                    val bundleConstructor = bundleClass.owner.constructors.first {
-                        it.parameters.size == 1 && it.parameters[0].type.isInt()
-                    }
                     val bundleVar = irTemporary(
                         irCallConstructor(bundleConstructor.symbol, emptyList()).apply {
                             arguments[0] = irInt(1)
@@ -479,13 +533,6 @@ class ScreenIrElementTransformer(
 
                     // bundle.putParcelable(KEY, arg)
                     // Put the arg into the bundle using the KEY constant as the key.
-                    val putParcelableFn = bundleClass.owner.functions.first {
-                        it.name.asString() == "putParcelable" && regularParameterCount(it.parameters) == 2
-                    }
-                    // Access the generated KEY property's backing field from the companion object.
-                    val keyProperty = companionClass.properties.first {
-                        it.name.asString() == "KEY"
-                    }
                     +irCall(putParcelableFn).apply {
                         dispatchReceiver = irGet(bundleVar)
                         // Read KEY from the companion object's backing field.
@@ -494,7 +541,7 @@ class ScreenIrElementTransformer(
                                 companionClass.defaultType,
                                 companionClass.symbol,
                             ),
-                            keyProperty.backingField!!,
+                            keyBackingField,
                         )
                         // Pass the arg parameter value.
                         arguments[2] = irGet(argParam)
@@ -502,9 +549,6 @@ class ScreenIrElementTransformer(
 
                     // fragment.setArguments(bundle)
                     // Attach the bundle to the fragment as its arguments.
-                    val setArgumentsFn = fragmentClass.owner.functions.first {
-                        it.name.asString() == "setArguments"
-                    }
                     +irCall(setArgumentsFn).apply {
                         dispatchReceiver = irGet(fragmentVar)
                         arguments[1] = irGet(bundleVar)

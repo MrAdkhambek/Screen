@@ -11,6 +11,10 @@ import org.jetbrains.kotlin.backend.common.extensions.IrGenerationExtension
 import org.jetbrains.kotlin.compiler.plugin.CompilerPluginRegistrar
 // Import the experimental API opt-in annotation required for compiler plugin APIs.
 import org.jetbrains.kotlin.compiler.plugin.ExperimentalCompilerApi
+// Import CommonConfigurationKeys for accessing the MessageCollector from the compiler configuration.
+import org.jetbrains.kotlin.config.CommonConfigurationKeys
+// Import MessageCollector for reporting compiler diagnostics during the IR phase.
+import org.jetbrains.kotlin.cli.common.messages.MessageCollector
 // Import CompilerConfiguration which provides access to CLI options and settings.
 import org.jetbrains.kotlin.config.CompilerConfiguration
 // Import the FIR extension registrar adapter used to register FIR-phase extensions.
@@ -37,7 +41,9 @@ class ScreenCompilerPluginRegistrar : CompilerPluginRegistrar() {
     override fun ExtensionStorage.registerExtensions(configuration: CompilerConfiguration) {
         // Register the FIR extension registrar which sets up declaration generation and checkers.
         FirExtensionRegistrarAdapter.registerExtension(ScreenFirExtensionRegistrar())
+        // Obtain the MessageCollector for reporting diagnostics during the IR phase.
+        val messageCollector = configuration.get(CommonConfigurationKeys.MESSAGE_COLLECTOR_KEY, MessageCollector.NONE)
         // Register the IR generation extension which fills in method bodies and constant values.
-        IrGenerationExtension.registerExtension(ScreenIrGenerationExtension())
+        IrGenerationExtension.registerExtension(ScreenIrGenerationExtension(messageCollector))
     }
 }
