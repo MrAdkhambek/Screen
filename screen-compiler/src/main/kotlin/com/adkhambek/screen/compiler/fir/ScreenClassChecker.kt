@@ -119,15 +119,22 @@ class ScreenClassChecker : FirClassChecker(MppCheckerKind.Common) {
 
     // Recursively checks whether a class identified by classId is a subclass of (or equals) targetId.
     // This handles deep inheritance chains by walking the full supertype hierarchy.
+    // A visited set guards against cycles in malformed or partially-resolved FIR trees.
     @OptIn(SymbolInternals::class)
-    private fun isSubclassOf(classId: ClassId, targetId: ClassId, context: CheckerContext): Boolean {
+    private fun isSubclassOf(
+        classId: ClassId,
+        targetId: ClassId,
+        context: CheckerContext,
+        visited: MutableSet<ClassId> = mutableSetOf(),
+    ): Boolean {
         if (classId == targetId) return true
+        if (!visited.add(classId)) return false
         val symbol = context.session.symbolProvider.getClassLikeSymbolByClassId(classId)
             as? FirRegularClassSymbol ?: return false
         symbol.lazyResolveToPhase(FirResolvePhase.SUPER_TYPES)
         return symbol.resolvedSuperTypes.any { superType ->
             val superClassId = superType.classId ?: return@any false
-            isSubclassOf(superClassId, targetId, context)
+            isSubclassOf(superClassId, targetId, context, visited)
         }
     }
 
