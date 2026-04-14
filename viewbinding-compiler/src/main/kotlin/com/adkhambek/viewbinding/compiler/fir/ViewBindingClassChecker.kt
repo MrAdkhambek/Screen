@@ -73,9 +73,16 @@ class ViewBindingClassChecker : FirClassChecker(MppCheckerKind.Common) {
 
     // Recursively checks whether a class identified by classId is Fragment or a subclass of Fragment.
     // Handles deep inheritance chains (e.g., MyFragment -> BaseFragment -> Fragment).
-    private fun isFragmentSubclass(classId: ClassId, context: CheckerContext): Boolean {
+    // A visited set guards against cycles in malformed or partially-resolved FIR trees.
+    private fun isFragmentSubclass(
+        classId: ClassId,
+        context: CheckerContext,
+        visited: MutableSet<ClassId> = mutableSetOf(),
+    ): Boolean {
         // Base case: the classId is exactly Fragment.
         if (classId == FRAGMENT_CLASS_ID) return true
+        // Guard against cycles in the supertype hierarchy.
+        if (!visited.add(classId)) return false
         // Look up the class symbol; return false if not found.
         val symbol = context.session.symbolProvider.getClassLikeSymbolByClassId(classId)
             as? FirRegularClassSymbol ?: return false
@@ -84,7 +91,7 @@ class ViewBindingClassChecker : FirClassChecker(MppCheckerKind.Common) {
         // Recursively check each supertype.
         return symbol.resolvedSuperTypes.any { superType ->
             val superClassId = superType.classId ?: return@any false
-            isFragmentSubclass(superClassId, context)
+            isFragmentSubclass(superClassId, context, visited)
         }
     }
 }
