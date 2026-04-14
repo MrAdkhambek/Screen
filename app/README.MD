@@ -17,14 +17,12 @@ plugins {
 }
 ```
 
-Compiler artifacts are substituted with local projects for development:
+Compiler artifacts are resolved from local builds via `includeBuild` in the root `settings.gradle.kts`:
 
 ```kotlin
-configurations.all {
-    resolutionStrategy.dependencySubstitution {
-        substitute(module("com.adkhambek:screen-compiler")).using(project(":screen-compiler"))
-        substitute(module("com.adkhambek:viewbinding-compiler")).using(project(":viewbinding-compiler"))
-    }
+pluginManagement {
+    includeBuild("screen-gradle-plugin")
+    includeBuild("viewbinding-gradle-plugin")
 }
 ```
 
