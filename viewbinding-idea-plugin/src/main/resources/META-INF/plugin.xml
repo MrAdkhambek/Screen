@@ -2,7 +2,6 @@
   <idea-version since-build="251" />
   <id>com.adkhambek.viewbinding.idea</id>
   <name>ViewBinding</name>
-  <version>1.0.0</version>
   <vendor>adkhambek</vendor>
   <description><![CDATA[IDE support for the ViewBinding compiler plugin.
         <ul>
