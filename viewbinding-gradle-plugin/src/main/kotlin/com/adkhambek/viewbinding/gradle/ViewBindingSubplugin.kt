@@ -38,12 +38,17 @@ class ViewBindingSubplugin : KotlinCompilerPluginSupportPlugin {
     // The extraction uses reflection because the Gradle plugin module doesn't have a
     // compile-time dependency on the Android Gradle plugin. This allows the plugin to
     // gracefully handle non-Android projects.
+    //
+    // Uses afterEvaluate to defer namespace reading until the Android plugin has
+    // finalized its configuration, avoiding a race condition where the provider
+    // could be evaluated before the namespace is set.
     override fun applyToCompilation(
         kotlinCompilation: KotlinCompilation<*>,
     ): Provider<List<SubpluginOption>> {
         val project = kotlinCompilation.target.project
-        return project.provider {
-            val options = mutableListOf<SubpluginOption>()
+        val namespaceProperty = project.objects.property(String::class.java)
+
+        project.afterEvaluate {
             try {
                 // Look up the "android" extension from the Android Gradle plugin.
                 val androidExtension = project.extensions.findByName("android")
@@ -54,16 +59,18 @@ class ViewBindingSubplugin : KotlinCompilerPluginSupportPlugin {
                         .getMethod("getNamespace")
                         .invoke(androidExtension) as? String
                     if (!namespace.isNullOrBlank()) {
-                        // Pass the namespace to the compiler plugin as a CLI option.
-                        options += SubpluginOption("namespace", namespace)
+                        namespaceProperty.set(namespace)
                     }
                 }
             } catch (_: Exception) {
                 // Silently ignore if the Android plugin is not applied or namespace is unavailable.
                 // In this case, the compiler plugin will not generate binding properties.
             }
-            options
         }
+
+        return namespaceProperty.map { namespace ->
+            listOf(SubpluginOption("namespace", namespace))
+        }.orElse(emptyList())
     }
 
     // Returns the unique plugin ID matching the ViewBindingCommandLineProcessor's pluginId.
