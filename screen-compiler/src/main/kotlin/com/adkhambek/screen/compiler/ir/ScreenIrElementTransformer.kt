@@ -208,7 +208,12 @@ class ScreenIrElementTransformer(
         val isNullable = returnType.isNullable()
 
         // Get the FQN of the arg class for Class.forName() and the parent class FQN for the Bundle key.
-        val argClassFqn = returnType.classOrNull!!.owner.kotlinFqName.asString()
+        val argClassSymbol = returnType.classOrNull
+            ?: error(
+                "Screen plugin: return type of 'arg' property in ${parentClass.kotlinFqName} " +
+                    "has no associated class symbol. Ensure the @Screen arg type is a concrete class."
+            )
+        val argClassFqn = argClassSymbol.owner.kotlinFqName.asString()
         val argKeyValue = parentClass.kotlinFqName.asString()
 
         // Resolve Fragment.getArguments() function symbol.
