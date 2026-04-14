@@ -50,6 +50,6 @@ class ScreenSubplugin : KotlinCompilerPluginSupportPlugin {
     override fun getPluginArtifact(): SubpluginArtifact = SubpluginArtifact(
         groupId = "com.adkhambek",
         artifactId = "screen-compiler",
-        version = "1.0-SNAPSHOT",
+        version = BuildConfig.VERSION,
     )
 }
