@@ -1,6 +1,8 @@
 // Package declaration for the FIR phase of the ViewBinding compiler plugin.
 package com.adkhambek.viewbinding.compiler.fir
 
+import com.adkhambek.compiler.common.SCREEN_CLASS_ID
+import com.adkhambek.compiler.common.isFragmentSubclass
 // Import DiagnosticReporter for reporting compilation diagnostics.
 import org.jetbrains.kotlin.diagnostics.DiagnosticReporter
 // Import reportOn for conveniently reporting diagnostics on source elements.
@@ -13,36 +15,10 @@ import org.jetbrains.kotlin.fir.analysis.checkers.context.CheckerContext
 import org.jetbrains.kotlin.fir.analysis.checkers.declaration.FirClassChecker
 // Import FirClass representing a class declaration in the FIR tree.
 import org.jetbrains.kotlin.fir.declarations.FirClass
-// Import FirResolvePhase for specifying minimum resolution phases.
-import org.jetbrains.kotlin.fir.declarations.FirResolvePhase
 // Import getAnnotationByClassId to look up annotations on symbols.
 import org.jetbrains.kotlin.fir.declarations.getAnnotationByClassId
-// Import symbolProvider for class symbol lookups.
-import org.jetbrains.kotlin.fir.resolve.providers.symbolProvider
-// Import FirRegularClassSymbol for regular class symbols.
-import org.jetbrains.kotlin.fir.symbols.impl.FirRegularClassSymbol
-// Import lazyResolveToPhase for triggering lazy resolution.
-import org.jetbrains.kotlin.fir.symbols.lazyResolveToPhase
 // Import classId extension for extracting ClassId from ConeKotlinType.
 import org.jetbrains.kotlin.fir.types.classId
-// Import ClassId for unique class identification.
-import org.jetbrains.kotlin.name.ClassId
-// Import FqName for fully qualified names.
-import org.jetbrains.kotlin.name.FqName
-// Import Name for simple identifiers.
-import org.jetbrains.kotlin.name.Name
-
-// ClassId for the @Screen annotation.
-private val SCREEN_CLASS_ID = ClassId(
-    FqName("com.adkhambek.screen"),
-    Name.identifier("Screen"),
-)
-
-// ClassId for androidx.fragment.app.Fragment, used to verify Fragment inheritance.
-private val FRAGMENT_CLASS_ID = ClassId(
-    FqName("androidx.fragment.app"),
-    Name.identifier("Fragment"),
-)
 
 // FIR class checker that validates @Screen annotation usage for the ViewBinding plugin.
 // This checker ensures that @Screen-annotated classes extend Fragment or DialogFragment,
@@ -68,23 +44,6 @@ class ViewBindingClassChecker : FirClassChecker(MppCheckerKind.Common) {
         // Report an error if the class doesn't extend Fragment.
         if (!extendsFragment) {
             reporter.reportOn(declaration.source, ViewBindingErrors.VIEW_BINDING_NOT_ON_FRAGMENT)
-        }
-    }
-
-    // Recursively checks whether a class identified by classId is Fragment or a subclass of Fragment.
-    // Handles deep inheritance chains (e.g., MyFragment -> BaseFragment -> Fragment).
-    private fun isFragmentSubclass(classId: ClassId, context: CheckerContext): Boolean {
-        // Base case: the classId is exactly Fragment.
-        if (classId == FRAGMENT_CLASS_ID) return true
-        // Look up the class symbol; return false if not found.
-        val symbol = context.session.symbolProvider.getClassLikeSymbolByClassId(classId)
-            as? FirRegularClassSymbol ?: return false
-        // Ensure supertypes are resolved before checking.
-        symbol.lazyResolveToPhase(FirResolvePhase.SUPER_TYPES)
-        // Recursively check each supertype.
-        return symbol.resolvedSuperTypes.any { superType ->
-            val superClassId = superType.classId ?: return@any false
-            isFragmentSubclass(superClassId, context)
         }
     }
 }

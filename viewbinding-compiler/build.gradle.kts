@@ -10,6 +10,7 @@ repositories {
 dependencies {
     compileOnly(kotlin("stdlib"))
     compileOnly(kotlin("compiler-embeddable"))
+    implementation(project(":compiler-common"))
 
     testImplementation(libs.kctfork.core)
     testImplementation(libs.junit.jupiter.api)
