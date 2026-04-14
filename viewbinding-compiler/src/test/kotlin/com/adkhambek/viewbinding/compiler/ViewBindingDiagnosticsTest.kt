@@ -27,6 +27,25 @@ class ViewBindingDiagnosticsTest {
     }
 
     @Test
+    fun `@Screen on Fragment without layout reports VIEW_BINDING_MISSING_LAYOUT`() {
+        val source = SourceFile.kotlin(
+            "TestClass.kt",
+            """
+            import com.adkhambek.screen.Screen
+            import androidx.fragment.app.Fragment
+
+            @Screen
+            class MyFragment : Fragment()
+            """,
+        )
+        val result = compileWithViewBindingPlugin(source)
+        assertEquals(KotlinCompilation.ExitCode.COMPILATION_ERROR, result.exitCode)
+        assertTrue(result.messages.contains("layout")) {
+            "Expected VIEW_BINDING_MISSING_LAYOUT diagnostic, got:\n${result.messages}"
+        }
+    }
+
+    @Test
     fun `@Screen on Fragment subclass compiles successfully`() {
         val source = SourceFile.kotlin(
             "TestClass.kt",
