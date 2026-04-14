@@ -12,7 +12,7 @@ Add the dependency to your module's `build.gradle.kts`:
 
 ```kotlin
 dependencies {
-    implementation("com.adkhambek:screen-annotations:1.0-SNAPSHOT")
+    implementation("com.adkhambek.screen:screen-annotations:1.1.0")
 }
 ```
 
