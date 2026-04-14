@@ -44,43 +44,43 @@ class ScreenLineMarkerProvider : LineMarkerProvider {
         Name.identifier("Screen"),
     )
 
-    // Called for each PSI element in the editor to determine if a line marker should be shown.
-    // For performance, line markers should only be placed on leaf elements (tokens).
-    // Returns a LineMarkerInfo if the element is the CLASS_KEYWORD of a @Screen class, null otherwise.
-    override fun getLineMarkerInfo(element: PsiElement): LineMarkerInfo<*>? {
-        // Only process leaf PSI elements (individual tokens).
-        val leaf = element as? LeafPsiElement ?: return null
-        // Only process the "class" keyword token.
-        if (leaf.elementType != KtTokens.CLASS_KEYWORD) return null
-        // Navigate up to the class declaration that owns this keyword.
-        val ktClass = leaf.parent as? KtClass ?: return null
-        // Check if the class has the @Screen annotation.
-        if (!hasScreenAnnotation(ktClass)) return null
+    // Fast path: returns null so that no expensive work runs on every editor repaint.
+    // All analysis is deferred to collectSlowLineMarkers() which runs in the background.
+    override fun getLineMarkerInfo(element: PsiElement): LineMarkerInfo<*>? = null
 
-        // Build the tooltip text showing the generated constants.
-        val fqName = ktClass.fqName?.asString() ?: return null
-        val tooltip = buildString {
-            append("Screen generated constants:")
-            append("\nKEY = \"$fqName\"")
+    // Slow path: runs in a background thread. Filters elements with cheap PSI checks,
+    // applies a text-based annotation pre-check, then uses analyze{} only for candidates.
+    override fun collectSlowLineMarkers(
+        elements: MutableList<out PsiElement>,
+        result: MutableCollection<in LineMarkerInfo<*>>
+    ) {
+        for (element in elements) {
+            val leaf = element as? LeafPsiElement ?: continue
+            if (leaf.elementType != KtTokens.CLASS_KEYWORD) continue
+            val ktClass = leaf.parent as? KtClass ?: continue
+            // Cheap text-based pre-check: skip classes that don't even mention @Screen.
+            if (ktClass.annotationEntries.none { it.shortName?.asString() == "Screen" }) continue
+            // Full K2 resolution to confirm the annotation identity.
+            if (!hasScreenAnnotation(ktClass)) continue
+
+            val fqName = ktClass.fqName?.asString() ?: continue
+            val tooltip = buildString {
+                append("Screen generated constants:")
+                append("\nKEY = \"$fqName\"")
+            }
+
+            result.add(
+                LineMarkerInfo(
+                    leaf as PsiElement,
+                    leaf.textRange,
+                    AllIcons.Nodes.Plugin,
+                    { tooltip },
+                    null,
+                    GutterIconRenderer.Alignment.RIGHT,
+                    { "@Screen" },
+                )
+            )
         }
-
-        // Create and return the line marker info with the plugin icon and tooltip.
-        return LineMarkerInfo(
-            // The anchor element for the marker (the leaf token).
-            leaf as PsiElement,
-            // The text range where the marker is placed (covers the "class" keyword).
-            leaf.textRange,
-            // The icon to display in the gutter (uses the standard Plugin icon).
-            AllIcons.Nodes.Plugin,
-            // Tooltip provider: returns the tooltip text on hover.
-            { tooltip },
-            // Navigation handler: null (no click action).
-            null,
-            // Alignment of the gutter icon (displayed on the right side).
-            GutterIconRenderer.Alignment.RIGHT,
-            // Accessible name for screen readers.
-            { "@Screen" },
-        )
     }
 
     // Checks whether a class or object has the @Screen annotation.
