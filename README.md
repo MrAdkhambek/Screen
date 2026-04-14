@@ -117,6 +117,18 @@ class SampleFragment : Fragment(R.layout.fragment_sample) {
 }
 ```
 
+## R8 / ProGuard
+
+The `screen-annotations` artifact ships consumer ProGuard rules that are applied automatically by AGP. These rules keep `@Screen`-annotated classes from being renamed by R8, which would break the generated `Class.forName()` and `FragmentFactory.instantiate()` calls.
+
+No manual configuration is needed in most cases. If your `@Screen(arg = MyArg::class)` argument type is a custom `Parcelable` that is **not** already kept by `@Parcelize` or the default Android rules, add a keep rule for it:
+
+```proguard
+-keep class com.example.MyArg
+```
+
+The bundled rules are located at `META-INF/proguard/screen-annotations.pro` inside the annotations JAR.
+
 ## License
 
 This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
