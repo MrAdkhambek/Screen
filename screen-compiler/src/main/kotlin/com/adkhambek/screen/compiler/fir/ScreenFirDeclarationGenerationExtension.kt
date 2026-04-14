@@ -429,8 +429,7 @@ class ScreenFirDeclarationGenerationExtension(
         // Replace FirExpressionStub default values with actual literal expressions.
         // The createMemberFunction helper creates stubs for default values, but we need
         // actual FIR literal expressions for the IR phase to process correctly.
-        val nullLiteral = buildLiteralExpression(null, ConstantValueKind.Null, null, setType = true)
-        val trueLiteral = buildLiteralExpression(null, ConstantValueKind.Boolean, true, setType = true)
+        // Each parameter gets a freshly built literal — FIR nodes must not be shared across tree positions.
         for (param in fn.valueParameters) {
             when (param.name.asString()) {
                 // Set the default value for the arg parameter to null (only if nullable).
@@ -438,9 +437,9 @@ class ScreenFirDeclarationGenerationExtension(
                     param.replaceDefaultValue(buildLiteralExpression(null, ConstantValueKind.Null, null, setType = true))
                 }
                 // Set the default value for key to null.
-                "key" -> param.replaceDefaultValue(nullLiteral)
+                "key" -> param.replaceDefaultValue(buildLiteralExpression(null, ConstantValueKind.Null, null, setType = true))
                 // Set the default value for clearContainer to true.
-                "clearContainer" -> param.replaceDefaultValue(trueLiteral)
+                "clearContainer" -> param.replaceDefaultValue(buildLiteralExpression(null, ConstantValueKind.Boolean, true, setType = true))
             }
         }
 
