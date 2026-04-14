@@ -148,12 +148,12 @@ class ScreenFirDeclarationGenerationExtension(
                     // Resolved class reference: extract classId from the type reference.
                     is FirClassReferenceExpression -> argClassId = argument.classTypeRef.coneTypeOrNull?.classId
                     // Before resolution: simple property access expression.
-                    // Construct a candidate ClassId in the same package and verify it exists.
+                    // Resolve by searching the same package, nested classes, and file imports.
                     is FirPropertyAccessExpression -> {
                         val simpleName = argument.calleeReference.name
-                        val candidateClassId = ClassId(this.classId.packageFqName, simpleName)
-                        if (session.symbolProvider.getClassLikeSymbolByClassId(candidateClassId) != null) {
-                            argClassId = candidateClassId
+                        val resolved = resolveClassBySimpleName(simpleName, this.classId, session)
+                        if (resolved != null) {
+                            argClassId = resolved
                         }
                     }
                     else -> {}
