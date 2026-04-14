@@ -7,6 +7,8 @@ import org.jetbrains.kotlin.diagnostics.KtDiagnosticFactoryToRendererMap
 import org.jetbrains.kotlin.diagnostics.KtDiagnosticsContainer
 // Import the error0 delegate which creates a diagnostic factory with no additional parameters.
 import org.jetbrains.kotlin.diagnostics.error0
+// Import the warning0 delegate which creates a warning diagnostic factory with no additional parameters.
+import org.jetbrains.kotlin.diagnostics.warning0
 // Import the base class for diagnostic renderer factories that provide message formatting.
 import org.jetbrains.kotlin.diagnostics.rendering.BaseDiagnosticRendererFactory
 // Import KtElement which is the PSI base type for Kotlin source elements used in error reporting.
@@ -25,6 +27,11 @@ object ScreenErrors : KtDiagnosticsContainer() {
     // android.os.Parcelable. This is required because arguments are passed via Bundle, which
     // only supports Parcelable types for complex objects.
     val SCREEN_ARG_NOT_PARCELABLE by error0<KtElement>()
+
+    // Warning reported when the @Screen `arg` parameter specifies a class that cannot be resolved
+    // by the symbol provider (e.g., cross-module type, type alias). Parcelable validation is
+    // skipped in this case, so the developer is warned that the check could not be performed.
+    val SCREEN_ARG_NOT_RESOLVABLE by warning0<KtElement>()
 
     // Returns the renderer factory that maps these diagnostic factories to human-readable messages.
     override fun getRendererFactory() = ScreenErrorMessages
@@ -45,6 +52,11 @@ object ScreenErrorMessages : BaseDiagnosticRendererFactory() {
         map.put(
             ScreenErrors.SCREEN_ARG_NOT_PARCELABLE,
             "@Screen 'arg' class must implement android.os.Parcelable."
+        )
+        // Message for SCREEN_ARG_NOT_RESOLVABLE: warns that the arg class could not be resolved.
+        map.put(
+            ScreenErrors.SCREEN_ARG_NOT_RESOLVABLE,
+            "@Screen 'arg' class could not be resolved. Parcelable check was skipped."
         )
     }
 }
