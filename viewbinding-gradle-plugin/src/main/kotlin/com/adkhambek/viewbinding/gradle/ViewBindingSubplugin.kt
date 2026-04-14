@@ -58,9 +58,12 @@ class ViewBindingSubplugin : KotlinCompilerPluginSupportPlugin {
                         options += SubpluginOption("namespace", namespace)
                     }
                 }
-            } catch (_: Exception) {
-                // Silently ignore if the Android plugin is not applied or namespace is unavailable.
-                // In this case, the compiler plugin will not generate binding properties.
+            } catch (_: ClassNotFoundException) {
+                // Android plugin is not on the classpath — expected in non-Android projects.
+            } catch (_: NoSuchMethodException) {
+                // getNamespace() not available in this AGP version.
+            } catch (e: Exception) {
+                project.logger.warn("ViewBindingSubplugin: unexpected error reading namespace, binding generation disabled: ${e.message}")
             }
             options
         }
