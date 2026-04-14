@@ -120,12 +120,33 @@ val AllStubs = listOf(
     FragmentFactoryStub,
 )
 
+// Stubs without Cicerone (FragmentScreen, FragmentFactory) to test graceful degradation.
+val StubsNoCicerone = listOf(
+    FragmentStub,
+    DialogFragmentStub,
+    ParcelableStub,
+    BundleStub,
+    BundleCompatStub,
+)
+
 // ── Compilation helper ──────────────────────────────────────────────────────
 
 @OptIn(ExperimentalCompilerApi::class)
 fun compileWithScreenPlugin(vararg sources: SourceFile): JvmCompilationResult {
     return KotlinCompilation().apply {
         this.sources = AllStubs + sources.toList()
+        compilerPluginRegistrars = listOf(ScreenCompilerPluginRegistrar())
+        commandLineProcessors = listOf(ScreenCommandLineProcessor())
+        languageVersion = "2.0"
+        inheritClassPath = true
+        messageOutputStream = System.out
+    }.compile()
+}
+
+@OptIn(ExperimentalCompilerApi::class)
+fun compileWithScreenPluginNoCicerone(vararg sources: SourceFile): JvmCompilationResult {
+    return KotlinCompilation().apply {
+        this.sources = StubsNoCicerone + sources.toList()
         compilerPluginRegistrars = listOf(ScreenCompilerPluginRegistrar())
         commandLineProcessors = listOf(ScreenCommandLineProcessor())
         languageVersion = "2.0"
