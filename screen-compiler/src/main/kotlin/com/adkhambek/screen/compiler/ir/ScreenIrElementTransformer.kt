@@ -213,33 +213,34 @@ class ScreenIrElementTransformer(
 
         // Resolve Fragment.getArguments() function symbol.
         val fragmentClass = pluginContext.referenceClass(FRAGMENT_CLASS_ID)!!
-        val getArgumentsFn = fragmentClass.owner.functions.first {
+        val getArgumentsFn = fragmentClass.owner.functions.firstOrNull {
             it.name.asString() == "getArguments"
-        }
+        } ?: error("Screen plugin: Fragment.getArguments() not found. Ensure androidx.fragment is on the classpath.")
 
         // Resolve kotlin.requireNotNull(T?): T — the 1-parameter overload.
         // Used to assert non-null on the Bundle and the extracted Parcelable.
         val requireNotNullFn = pluginContext.referenceFunctions(
             CallableId(FqName("kotlin"), Name.identifier("requireNotNull"))
-        ).first {
+        ).firstOrNull {
             it.owner.parameters.count { p -> p.kind == IrParameterKind.Regular } == 1
-        }
+        } ?: error("Screen plugin: kotlin.requireNotNull(T?) not found.")
 
         // Resolve BundleCompat.getParcelable(Bundle, String, Class) — the 3-parameter overload.
         // This is the AndroidX-compatible way to read Parcelable objects from a Bundle.
         val bundleCompatClass = pluginContext.referenceClass(BUNDLE_COMPAT_CLASS_ID)!!
-        val getParcelableFn = bundleCompatClass.owner.functions.first {
+        val getParcelableFn = bundleCompatClass.owner.functions.firstOrNull {
             it.name.asString() == "getParcelable" && regularParameterCount(it.parameters) == 3
-        }
+        } ?: error("Screen plugin: BundleCompat.getParcelable(Bundle, String, Class) not found. Ensure androidx.core is on the classpath.")
 
         // Resolve Class.forName(String) to get the java.lang.Class object for the arg type.
         val javaLangClass = pluginContext.referenceClass(JAVA_CLASS_ID)!!
-        val forNameFn = javaLangClass.owner.functions.first {
+        val forNameFn = javaLangClass.owner.functions.firstOrNull {
             it.name.asString() == "forName" && regularParameterCount(it.parameters) == 1
-        }
+        } ?: error("Screen plugin: Class.forName(String) not found.")
 
         // Get the 'this' parameter for dispatching method calls on the fragment instance.
-        val thisParam = getter.parameters.first()
+        val thisParam = getter.parameters.firstOrNull()
+            ?: error("Screen plugin: no dispatch receiver found for arg getter.")
         // Get the Bundle type for the requireNotNull call's type argument.
         val bundleType = pluginContext.referenceClass(BUNDLE_CLASS_ID)!!.owner.defaultType
 
@@ -373,9 +374,11 @@ class ScreenIrElementTransformer(
     ) {
         // Resolve parameters by name.
         val argParam = declaration.parameters.firstOrNull { it.name.asString() == "arg" }
-        val keyParam = declaration.parameters.first { it.name.asString() == "key" }
+        val keyParam = declaration.parameters.firstOrNull { it.name.asString() == "key" }
+            ?: error("Screen plugin: 'key' parameter not found in createScreen().")
         val clearContainerParam =
-            declaration.parameters.first { it.name.asString() == "clearContainer" }
+            declaration.parameters.firstOrNull { it.name.asString() == "clearContainer" }
+                ?: error("Screen plugin: 'clearContainer' parameter not found in createScreen().")
         val hasArg = argParam != null
 
         // Resolve Cicerone symbols needed for the function body.
@@ -383,9 +386,9 @@ class ScreenIrElementTransformer(
         val fragmentScreenClass = pluginContext.referenceClass(FRAGMENT_SCREEN_CLASS_ID)!!
         val fragmentScreenCompanion = fragmentScreenClass.owner.companionObject()!!
         // FragmentScreen.invoke(key, clearContainer, creator) — the 3-parameter overload.
-        val invokeFunction = fragmentScreenCompanion.functions.first {
+        val invokeFunction = fragmentScreenCompanion.functions.firstOrNull {
             it.name.asString() == "invoke" && regularParameterCount(it.parameters) == 3
-        }
+        } ?: error("Screen plugin: FragmentScreen.invoke(key, clearContainer, creator) not found. Ensure Cicerone is on the classpath.")
 
         // Creator is the SAM interface that provides a lambda for fragment instantiation.
         val creatorClass = pluginContext.referenceClass(CREATOR_CLASS_ID)!!
@@ -398,18 +401,18 @@ class ScreenIrElementTransformer(
         val fragmentType = fragmentClass.owner.defaultType
 
         // Resolve FragmentFactory.instantiate(ClassLoader, String) for creating fragment instances.
-        val instantiateFn = fragmentFactoryClass.owner.functions.first {
+        val instantiateFn = fragmentFactoryClass.owner.functions.firstOrNull {
             it.name.asString() == "instantiate" && regularParameterCount(it.parameters) == 2
-        }
+        } ?: error("Screen plugin: FragmentFactory.instantiate(ClassLoader, String) not found. Ensure androidx.fragment is on the classpath.")
 
         // Resolve java.lang.Class.forName(String) and getClassLoader() for classloader access.
         val javaLangClass = pluginContext.referenceClass(JAVA_CLASS_ID)!!
-        val forNameFn = javaLangClass.owner.functions.first {
+        val forNameFn = javaLangClass.owner.functions.firstOrNull {
             it.name.asString() == "forName" && regularParameterCount(it.parameters) == 1
-        }
-        val getClassLoaderFn = javaLangClass.owner.functions.first {
+        } ?: error("Screen plugin: Class.forName(String) not found.")
+        val getClassLoaderFn = javaLangClass.owner.functions.firstOrNull {
             it.name.asString() == "getClassLoader" && it.parameters.none { p -> p.kind == IrParameterKind.Regular }
-        }
+        } ?: error("Screen plugin: Class.getClassLoader() not found.")
 
         // Build the Creator SAM type: Creator<FragmentFactory, Fragment>.
         val creatorType = creatorClass.typeWith(fragmentFactoryType, fragmentType)
@@ -464,9 +467,9 @@ class ScreenIrElementTransformer(
                     // val bundle = Bundle(1)
                     // Create a new Bundle with initial capacity of 1 (for the single arg).
                     val bundleClass = pluginContext.referenceClass(BUNDLE_CLASS_ID)!!
-                    val bundleConstructor = bundleClass.owner.constructors.first {
+                    val bundleConstructor = bundleClass.owner.constructors.firstOrNull {
                         it.parameters.size == 1 && it.parameters[0].type.isInt()
-                    }
+                    } ?: error("Screen plugin: Bundle(Int) constructor not found. Ensure android.os.Bundle is on the classpath.")
                     val bundleVar = irTemporary(
                         irCallConstructor(bundleConstructor.symbol, emptyList()).apply {
                             arguments[0] = irInt(1)
@@ -476,13 +479,13 @@ class ScreenIrElementTransformer(
 
                     // bundle.putParcelable(KEY, arg)
                     // Put the arg into the bundle using the KEY constant as the key.
-                    val putParcelableFn = bundleClass.owner.functions.first {
+                    val putParcelableFn = bundleClass.owner.functions.firstOrNull {
                         it.name.asString() == "putParcelable" && regularParameterCount(it.parameters) == 2
-                    }
+                    } ?: error("Screen plugin: Bundle.putParcelable(String, Parcelable) not found.")
                     // Access the generated KEY property's backing field from the companion object.
-                    val keyProperty = companionClass.properties.first {
+                    val keyProperty = companionClass.properties.firstOrNull {
                         it.name.asString() == "KEY"
-                    }
+                    } ?: error("Screen plugin: KEY property not found on companion object.")
                     +irCall(putParcelableFn).apply {
                         dispatchReceiver = irGet(bundleVar)
                         // Read KEY from the companion object's backing field.
@@ -499,9 +502,9 @@ class ScreenIrElementTransformer(
 
                     // fragment.setArguments(bundle)
                     // Attach the bundle to the fragment as its arguments.
-                    val setArgumentsFn = fragmentClass.owner.functions.first {
+                    val setArgumentsFn = fragmentClass.owner.functions.firstOrNull {
                         it.name.asString() == "setArguments"
-                    }
+                    } ?: error("Screen plugin: Fragment.setArguments(Bundle) not found. Ensure androidx.fragment is on the classpath.")
                     +irCall(setArgumentsFn).apply {
                         dispatchReceiver = irGet(fragmentVar)
                         arguments[1] = irGet(bundleVar)
