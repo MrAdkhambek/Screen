@@ -409,4 +409,94 @@ class ScreenDeclarationGenerationTest {
             }
         }
     }
+
+    // ── createScreen (cross-package arg) ────────────────────────────────────
+
+    @Nested
+    inner class CreateScreenCrossPackageArg {
+
+        @Test
+        fun `arg in different package with explicit import generates createScreen`() {
+            val argFile = SourceFile.kotlin(
+                "MyArg.kt",
+                """
+                package com.other.pkg
+
+                import android.os.Parcelable
+
+                class MyArg : Parcelable
+                """,
+            )
+            val fragment = SourceFile.kotlin(
+                "MyFragment.kt",
+                """
+                package com.example
+
+                import com.adkhambek.screen.Screen
+                import androidx.fragment.app.Fragment
+                import com.other.pkg.MyArg
+
+                @Screen(arg = MyArg::class)
+                class CrossPkgFragment : Fragment()
+                """,
+            )
+            val usage = SourceFile.kotlin(
+                "Usage.kt",
+                """
+                package com.example
+
+                import com.github.terrakok.cicerone.androidx.FragmentScreen
+                import com.other.pkg.MyArg
+
+                fun create(arg: MyArg): FragmentScreen = CrossPkgFragment.createScreen(arg)
+                """,
+            )
+            val result = compileWithScreenPlugin(argFile, fragment, usage)
+            assertEquals(KotlinCompilation.ExitCode.OK, result.exitCode) {
+                "Expected createScreen with cross-package arg. Output:\n${result.messages}"
+            }
+        }
+
+        @Test
+        fun `arg in different package with star import generates createScreen`() {
+            val argFile = SourceFile.kotlin(
+                "MyArg.kt",
+                """
+                package com.other.pkg
+
+                import android.os.Parcelable
+
+                class StarArg : Parcelable
+                """,
+            )
+            val fragment = SourceFile.kotlin(
+                "MyFragment.kt",
+                """
+                package com.example
+
+                import com.adkhambek.screen.Screen
+                import androidx.fragment.app.Fragment
+                import com.other.pkg.*
+
+                @Screen(arg = StarArg::class)
+                class StarImportFragment : Fragment()
+                """,
+            )
+            val usage = SourceFile.kotlin(
+                "Usage.kt",
+                """
+                package com.example
+
+                import com.github.terrakok.cicerone.androidx.FragmentScreen
+                import com.other.pkg.StarArg
+
+                fun create(arg: StarArg): FragmentScreen = StarImportFragment.createScreen(arg)
+                """,
+            )
+            val result = compileWithScreenPlugin(argFile, fragment, usage)
+            assertEquals(KotlinCompilation.ExitCode.OK, result.exitCode) {
+                "Expected createScreen with star-imported arg. Output:\n${result.messages}"
+            }
+        }
+    }
 }

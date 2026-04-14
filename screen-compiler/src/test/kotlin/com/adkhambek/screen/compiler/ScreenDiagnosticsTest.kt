@@ -532,6 +532,98 @@ class ScreenDiagnosticsTest {
         }
     }
 
+    // ── Cross-package arg resolution ──────────────────────────────────────────
+
+    @Nested
+    inner class CrossPackageArg {
+
+        @Test
+        fun `arg class in different package with explicit import compiles successfully`() {
+            val argFile = SourceFile.kotlin(
+                "MyArg.kt",
+                """
+                package com.other.pkg
+
+                import android.os.Parcelable
+
+                class MyArg : Parcelable
+                """,
+            )
+            val fragment = SourceFile.kotlin(
+                "TestClass.kt",
+                """
+                package com.example
+
+                import com.adkhambek.screen.Screen
+                import androidx.fragment.app.Fragment
+                import com.other.pkg.MyArg
+
+                @Screen(arg = MyArg::class)
+                class MyFragment : Fragment()
+                """,
+            )
+            assertEquals(KotlinCompilation.ExitCode.OK, compileWithScreenPlugin(argFile, fragment).exitCode)
+        }
+
+        @Test
+        fun `arg class in different package with star import compiles successfully`() {
+            val argFile = SourceFile.kotlin(
+                "MyArg.kt",
+                """
+                package com.other.pkg
+
+                import android.os.Parcelable
+
+                class MyArg : Parcelable
+                """,
+            )
+            val fragment = SourceFile.kotlin(
+                "TestClass.kt",
+                """
+                package com.example
+
+                import com.adkhambek.screen.Screen
+                import androidx.fragment.app.Fragment
+                import com.other.pkg.*
+
+                @Screen(arg = MyArg::class)
+                class MyFragment : Fragment()
+                """,
+            )
+            assertEquals(KotlinCompilation.ExitCode.OK, compileWithScreenPlugin(argFile, fragment).exitCode)
+        }
+
+        @Test
+        fun `non-Parcelable arg in different package reports error`() {
+            val argFile = SourceFile.kotlin(
+                "MyArg.kt",
+                """
+                package com.other.pkg
+
+                class NotParcelable
+                """,
+            )
+            val fragment = SourceFile.kotlin(
+                "TestClass.kt",
+                """
+                package com.example
+
+                import com.adkhambek.screen.Screen
+                import androidx.fragment.app.Fragment
+                import com.other.pkg.NotParcelable
+
+                @Screen(arg = NotParcelable::class)
+                class MyFragment : Fragment()
+                """,
+            )
+            val result = compileWithScreenPlugin(argFile, fragment)
+            assertEquals(KotlinCompilation.ExitCode.COMPILATION_ERROR, result.exitCode)
+            assertTrue(result.messages.contains("Parcelable")) {
+                "Expected SCREEN_ARG_NOT_PARCELABLE diagnostic, got:\n${result.messages}"
+            }
+        }
+    }
+
     // ── No arg (default Unit) ────────────────────────────────────────────────
 
     @Nested
