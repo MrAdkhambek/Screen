@@ -1,6 +1,11 @@
 // Package declaration for the FIR phase of the Screen compiler plugin.
 package com.adkhambek.screen.compiler.fir
 
+import com.adkhambek.compiler.common.FRAGMENT_CLASS_ID
+import com.adkhambek.compiler.common.SCREEN_CLASS_ID
+import com.adkhambek.compiler.common.isFragmentSubclass
+import com.adkhambek.compiler.common.isSubclassOf
+import com.adkhambek.compiler.common.resolveArgClassIdFromAnnotation
 // Import DiagnosticReporter used to report compilation errors and warnings.
 import org.jetbrains.kotlin.diagnostics.DiagnosticReporter
 // Import reportOn extension function for conveniently reporting diagnostics on source elements.
@@ -13,54 +18,22 @@ import org.jetbrains.kotlin.fir.analysis.checkers.context.CheckerContext
 import org.jetbrains.kotlin.fir.analysis.checkers.declaration.FirClassChecker
 // Import FirClass which represents a class declaration in the FIR tree.
 import org.jetbrains.kotlin.fir.declarations.FirClass
-// Import FirResolvePhase used to specify the minimum resolution phase required before accessing data.
-import org.jetbrains.kotlin.fir.declarations.FirResolvePhase
-// Import findArgumentByName to extract named arguments from annotation expressions.
-import org.jetbrains.kotlin.fir.declarations.findArgumentByName
 // Import getAnnotationByClassId to look up annotations on a symbol by their class ID.
 import org.jetbrains.kotlin.fir.declarations.getAnnotationByClassId
-// Import FirAnnotation which represents an annotation in the FIR tree.
-import org.jetbrains.kotlin.fir.expressions.FirAnnotation
-// Import FirClassReferenceExpression for handling resolved class references in annotations.
-import org.jetbrains.kotlin.fir.expressions.FirClassReferenceExpression
-// Import FirGetClassCall which represents a ::class expression in the FIR tree.
-import org.jetbrains.kotlin.fir.expressions.FirGetClassCall
-// Import FirPropertyAccessExpression for handling unresolved property accesses in annotations.
-import org.jetbrains.kotlin.fir.expressions.FirPropertyAccessExpression
-// Import FirResolvedQualifier for handling fully resolved qualified names in annotations.
-import org.jetbrains.kotlin.fir.expressions.FirResolvedQualifier
 // Import symbolProvider to look up class symbols by ClassId from the session.
 import org.jetbrains.kotlin.fir.resolve.providers.symbolProvider
 // Import SymbolInternals opt-in required for accessing internal symbol properties.
 import org.jetbrains.kotlin.fir.symbols.SymbolInternals
 // Import FirRegularClassSymbol which represents a regular (non-anonymous, non-local) class symbol.
 import org.jetbrains.kotlin.fir.symbols.impl.FirRegularClassSymbol
-// Import lazyResolveToPhase to trigger lazy resolution of a symbol to a specific FIR phase.
-import org.jetbrains.kotlin.fir.symbols.lazyResolveToPhase
 // Import classId extension to extract the ClassId from a ConeKotlinType.
 import org.jetbrains.kotlin.fir.types.classId
-// Import coneTypeOrNull to safely extract the ConeKotlinType from a type reference.
-import org.jetbrains.kotlin.fir.types.coneTypeOrNull
 // Import ClassId which uniquely identifies a class by its package and relative name.
 import org.jetbrains.kotlin.name.ClassId
 // Import FqName which represents a fully qualified dotted name.
 import org.jetbrains.kotlin.name.FqName
 // Import Name which represents a simple (non-qualified) identifier name.
 import org.jetbrains.kotlin.name.Name
-// Import StandardClassIds which provides well-known ClassIds for standard library types.
-import org.jetbrains.kotlin.name.StandardClassIds
-
-// ClassId for the @Screen annotation, used to look up the annotation on class symbols.
-private val SCREEN_CLASS_ID = ClassId(
-    FqName("com.adkhambek.screen"),
-    Name.identifier("Screen"),
-)
-
-// ClassId for androidx.fragment.app.Fragment, used to verify Fragment inheritance.
-private val FRAGMENT_CLASS_ID = ClassId(
-    FqName("androidx.fragment.app"),
-    Name.identifier("Fragment"),
-)
 
 // ClassId for android.os.Parcelable, used to verify the arg class implements Parcelable.
 private val PARCELABLE_CLASS_ID = ClassId(
@@ -102,8 +75,8 @@ class ScreenClassChecker : FirClassChecker(MppCheckerKind.Common) {
         }
 
         // Check that the arg class implements Parcelable (if specified).
-        // resolveArgClassId extracts the ClassId from the @Screen(arg = ...) parameter.
-        val argClassId = resolveArgClassId(annotation, symbol.classId, context)
+        // resolveArgClassIdFromAnnotation extracts the ClassId from the @Screen(arg = ...) parameter.
+        val argClassId = resolveArgClassIdFromAnnotation(annotation, symbol.classId, context)
         if (argClassId != null) {
             // Look up the arg class symbol in the compilation session.
             val argSymbol = session.symbolProvider.getClassLikeSymbolByClassId(argClassId)
@@ -117,65 +90,14 @@ class ScreenClassChecker : FirClassChecker(MppCheckerKind.Common) {
         }
     }
 
-    // Recursively checks whether a class identified by classId is a subclass of (or equals) targetId.
-    // This handles deep inheritance chains by walking the full supertype hierarchy.
-    @OptIn(SymbolInternals::class)
-    private fun isSubclassOf(classId: ClassId, targetId: ClassId, context: CheckerContext): Boolean {
-        if (classId == targetId) return true
-        val symbol = context.session.symbolProvider.getClassLikeSymbolByClassId(classId)
-            as? FirRegularClassSymbol ?: return false
-        symbol.lazyResolveToPhase(FirResolvePhase.SUPER_TYPES)
-        return symbol.resolvedSuperTypes.any { superType ->
-            val superClassId = superType.classId ?: return@any false
-            isSubclassOf(superClassId, targetId, context)
-        }
-    }
-
-    private fun isFragmentSubclass(classId: ClassId, context: CheckerContext): Boolean =
-        isSubclassOf(classId, FRAGMENT_CLASS_ID, context)
-
     // Resolves the ClassId of the arg parameter from the @Screen annotation expression.
-    // The arg value can appear in different FIR expression forms depending on the resolution phase:
-    //   - FirResolvedQualifier: fully resolved reference (e.g., after type resolution)
-    //   - FirClassReferenceExpression: resolved class reference
-    //   - FirPropertyAccessExpression: unresolved simple name (before resolution)
-    // Returns null if arg is not specified, is Unit::class, or cannot be resolved.
+    // Delegates to the shared resolveArgClassIdFromAnnotation with the CheckerContext's session.
     @OptIn(SymbolInternals::class)
-    private fun resolveArgClassId(
-        annotation: FirAnnotation,
+    private fun resolveArgClassIdFromAnnotation(
+        annotation: org.jetbrains.kotlin.fir.expressions.FirAnnotation,
         ownerClassId: ClassId,
         context: CheckerContext,
     ): ClassId? {
-        val session = context.session
-        // Find the "arg" named argument in the annotation. returnFirstWhenNotFound=false
-        // means return null if the argument is not explicitly specified.
-        val argExpr = annotation.findArgumentByName(Name.identifier("arg"), returnFirstWhenNotFound = false)
-            ?: return null
-        // The arg expression should be a ::class call (e.g., MyArg::class).
-        val getClassCall = argExpr as? FirGetClassCall ?: return null
-        // Get the inner argument of the ::class call.
-        val argument = getClassCall.argument
-
-        // Extract the ClassId based on the expression type.
-        val classId = when (argument) {
-            // After full resolution: the argument is a resolved qualifier with a known classId.
-            is FirResolvedQualifier -> argument.classId
-            // Resolved class reference: extract classId from the type reference.
-            is FirClassReferenceExpression -> argument.classTypeRef.coneTypeOrNull?.classId
-            // Before resolution: the argument is a simple property access expression.
-            // We attempt to resolve it by constructing a candidate ClassId in the same package.
-            is FirPropertyAccessExpression -> {
-                val simpleName = argument.calleeReference.name
-                val candidateClassId = ClassId(ownerClassId.packageFqName, simpleName)
-                // Verify the candidate class actually exists.
-                if (session.symbolProvider.getClassLikeSymbolByClassId(candidateClassId) != null) {
-                    candidateClassId
-                } else null
-            }
-            else -> null
-        }
-
-        // Return null if the resolved class is Unit (meaning no arg was specified).
-        return if (classId == StandardClassIds.Unit) null else classId
+        return resolveArgClassIdFromAnnotation(annotation, ownerClassId.packageFqName, context.session)
     }
 }

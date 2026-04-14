@@ -1,10 +1,9 @@
 // Package declaration for the FIR phase of the ViewBinding compiler plugin.
 package com.adkhambek.viewbinding.compiler.fir
 
+import com.adkhambek.compiler.common.SCREEN_ANNOTATION_FQ_NAME
 // Import DeclarationPredicate which defines a condition for matching FIR declarations.
 import org.jetbrains.kotlin.fir.extensions.predicate.DeclarationPredicate
-// Import FqName which represents a fully qualified dotted name.
-import org.jetbrains.kotlin.name.FqName
 
 // Predicate that matches classes annotated with @com.adkhambek.screen.Screen.
 // The ViewBinding plugin reuses the same @Screen annotation as the Screen plugin.
@@ -14,5 +13,5 @@ import org.jetbrains.kotlin.name.FqName
 val viewBindingPredicate = DeclarationPredicate.create {
     // Match any declaration annotated with @Screen.
     // Note: Both the Screen and ViewBinding plugins use the same annotation.
-    annotated(FqName("com.adkhambek.screen.Screen"))
+    annotated(SCREEN_ANNOTATION_FQ_NAME)
 }
