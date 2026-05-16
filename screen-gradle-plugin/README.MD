@@ -49,7 +49,7 @@ plugins {
 
 ```kotlin
 dependencies {
-    implementation("com.adkhambek:screen-annotations:1.0-SNAPSHOT")
+    implementation("com.adkhambek.screen:screen-annotations:1.1.0")
 }
 ```
 
@@ -64,7 +64,7 @@ class MyFragment : Fragment(R.layout.fragment_my)
 
 The plugin:
 1. Applies to all Kotlin compilations (`isApplicable` always returns `true`)
-2. Adds the `com.adkhambek:screen-compiler:1.0-SNAPSHOT` artifact to the compiler classpath
+2. Adds the `com.adkhambek.screen:screen-compiler:1.1.0` artifact to the compiler classpath
 3. No additional configuration options are required
 
 ## Building
