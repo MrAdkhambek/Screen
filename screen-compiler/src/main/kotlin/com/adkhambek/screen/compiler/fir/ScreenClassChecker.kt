@@ -90,6 +90,7 @@ class ScreenClassChecker : FirClassChecker(MppCheckerKind.Common) {
 
         // Check that the class extends Fragment by walking its resolved supertype chain.
         // resolvedSuperTypes includes all direct supertypes (superclass + interfaces).
+        symbol.lazyResolveToPhase(FirResolvePhase.SUPER_TYPES)
         val extendsFragment = symbol.resolvedSuperTypes.any { superType ->
             val superClassId = superType.classId ?: return@any false
             // Recursively check if this supertype is Fragment or inherits from Fragment.
