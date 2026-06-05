@@ -98,7 +98,7 @@ class ScreenClassChecker : FirClassChecker(MppCheckerKind.Common) {
 
         // Report an error if the class doesn't extend Fragment.
         if (!extendsFragment) {
-            reporter.reportOn(declaration.source, ScreenErrors.SCREEN_NOT_ON_FRAGMENT)
+            reporter.reportOn(annotation.source, ScreenErrors.SCREEN_NOT_ON_FRAGMENT)
         }
 
         // Check that the arg class implements Parcelable (if specified).
@@ -111,7 +111,7 @@ class ScreenClassChecker : FirClassChecker(MppCheckerKind.Common) {
             if (argSymbol != null) {
                 // Recursively check if the arg class implements Parcelable anywhere in its hierarchy.
                 if (!isSubclassOf(argClassId, PARCELABLE_CLASS_ID, context)) {
-                    reporter.reportOn(declaration.source, ScreenErrors.SCREEN_ARG_NOT_PARCELABLE)
+                    reporter.reportOn(annotation.source, ScreenErrors.SCREEN_ARG_NOT_PARCELABLE)
                 }
             }
         }
