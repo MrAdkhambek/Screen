@@ -2,7 +2,6 @@
   <idea-version since-build="251" />
   <id>com.adkhambek.screen.idea</id>
   <name>Screen</name>
-  <version>1.0.0</version>
   <vendor>adkhambek</vendor>
   <description><![CDATA[IDE support for the Screen compiler plugin.
         <ul>
