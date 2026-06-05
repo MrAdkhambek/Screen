@@ -1,7 +1,6 @@
 package com.adkhambek.screen.sample
 
 import android.os.Bundle
-import android.util.Log
 import android.view.View
 import android.widget.Toast
 import androidx.fragment.app.Fragment
@@ -14,7 +13,6 @@ class SampleFragment : Fragment(R.layout.fragment_sample) {
         super.onViewCreated(view, savedInstanceState)
 
         binding.textView.setText(arg.id.toString())
-        Log.d("TTT", (binding === binding).toString())
         Toast.makeText(requireContext(), arg.id.toString(), Toast.LENGTH_LONG).show()
     }
 }
