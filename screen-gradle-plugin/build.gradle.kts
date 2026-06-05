@@ -1,7 +1,7 @@
 plugins {
     `java-gradle-plugin`
-    kotlin("jvm") version "2.3.10"
-    id("com.vanniktech.maven.publish") version "0.36.0"
+    kotlin("jvm") version libs.versions.kotlin
+    id("com.vanniktech.maven.publish") version libs.versions.maven.publish
 }
 
 repositories {
@@ -9,7 +9,7 @@ repositories {
 }
 
 dependencies {
-    implementation("org.jetbrains.kotlin:kotlin-gradle-plugin-api:2.3.10")
+    implementation("org.jetbrains.kotlin:kotlin-gradle-plugin-api:${libs.versions.kotlin.get()}")
 }
 
 gradlePlugin {
