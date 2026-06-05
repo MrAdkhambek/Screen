@@ -163,14 +163,10 @@ class ScreenClassChecker : FirClassChecker(MppCheckerKind.Common) {
             // Resolved class reference: extract classId from the type reference.
             is FirClassReferenceExpression -> argument.classTypeRef.coneTypeOrNull?.classId
             // Before resolution: the argument is a simple property access expression.
-            // We attempt to resolve it by constructing a candidate ClassId in the same package.
+            // Resolve by searching the same package, nested classes, and file imports.
             is FirPropertyAccessExpression -> {
                 val simpleName = argument.calleeReference.name
-                val candidateClassId = ClassId(ownerClassId.packageFqName, simpleName)
-                // Verify the candidate class actually exists.
-                if (session.symbolProvider.getClassLikeSymbolByClassId(candidateClassId) != null) {
-                    candidateClassId
-                } else null
+                resolveClassBySimpleName(simpleName, ownerClassId, session)
             }
             else -> null
         }
