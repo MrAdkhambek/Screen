@@ -13,10 +13,20 @@ import org.jetbrains.kotlin.fir.analysis.checkers.context.CheckerContext
 import org.jetbrains.kotlin.fir.analysis.checkers.declaration.FirClassChecker
 // Import FirClass representing a class declaration in the FIR tree.
 import org.jetbrains.kotlin.fir.declarations.FirClass
+// Import FirConstructor for accessing constructor declarations.
+import org.jetbrains.kotlin.fir.declarations.FirConstructor
+// Import DirectDeclarationsAccess opt-in for accessing direct declarations.
+import org.jetbrains.kotlin.fir.declarations.DirectDeclarationsAccess
 // Import FirResolvePhase for specifying minimum resolution phases.
 import org.jetbrains.kotlin.fir.declarations.FirResolvePhase
 // Import getAnnotationByClassId to look up annotations on symbols.
 import org.jetbrains.kotlin.fir.declarations.getAnnotationByClassId
+// Import FirExpression as the base type for FIR expressions.
+import org.jetbrains.kotlin.fir.expressions.FirExpression
+// Import FirPropertyAccessExpression for property access expressions (e.g., R.layout.name).
+import org.jetbrains.kotlin.fir.expressions.FirPropertyAccessExpression
+// Import FirResolvedQualifier for fully resolved qualified names.
+import org.jetbrains.kotlin.fir.expressions.FirResolvedQualifier
 // Import symbolProvider for class symbol lookups.
 import org.jetbrains.kotlin.fir.resolve.providers.symbolProvider
 // Import FirRegularClassSymbol for regular class symbols.
@@ -68,7 +78,42 @@ class ViewBindingClassChecker : FirClassChecker(MppCheckerKind.Common) {
         // Report an error if the class doesn't extend Fragment.
         if (!extendsFragment) {
             reporter.reportOn(declaration.source, ViewBindingErrors.VIEW_BINDING_NOT_ON_FRAGMENT)
+        } else if (!hasLayoutInConstructor(declaration)) {
+            // The class extends Fragment but doesn't pass a layout resource to the super
+            // constructor. Without a layout, the plugin cannot determine which binding class
+            // to generate, so the binding property would silently not be created.
+            reporter.reportOn(declaration.source, ViewBindingErrors.VIEW_BINDING_MISSING_LAYOUT)
         }
+    }
+
+    // Checks whether the Fragment class passes a layout resource (R.layout.xxx) to its
+    // super constructor. Returns false when the primary constructor has no delegated call,
+    // no arguments, or the first argument is not an R.layout reference.
+    @OptIn(DirectDeclarationsAccess::class)
+    private fun hasLayoutInConstructor(declaration: FirClass): Boolean {
+        val primaryConstructor = declaration.declarations
+            .filterIsInstance<FirConstructor>()
+            .firstOrNull { it.isPrimary } ?: return false
+        val delegatedCall = primaryConstructor.delegatedConstructor ?: return false
+        val firstArg = delegatedCall.argumentList.arguments.firstOrNull() ?: return false
+        return isLayoutResourceExpression(firstArg)
+    }
+
+    // Checks whether an expression matches the R.layout.xxx pattern.
+    // Handles two FIR resolution stages:
+    //   - After resolution: receiver is a FirResolvedQualifier with classId ending in "layout"
+    //   - Before resolution: receiver is a FirPropertyAccessExpression with callee name "layout"
+    private fun isLayoutResourceExpression(expr: FirExpression): Boolean {
+        if (expr !is FirPropertyAccessExpression) return false
+        val receiver = expr.explicitReceiver ?: return false
+        if (receiver is FirResolvedQualifier) {
+            val classId = receiver.classId ?: return false
+            return classId.shortClassName.asString() == "layout"
+        }
+        if (receiver is FirPropertyAccessExpression) {
+            return receiver.calleeReference.name.asString() == "layout"
+        }
+        return false
     }
 
     // Recursively checks whether a class identified by classId is Fragment or a subclass of Fragment.
