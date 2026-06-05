@@ -113,6 +113,9 @@ class ScreenClassChecker : FirClassChecker(MppCheckerKind.Common) {
                 if (!isSubclassOf(argClassId, PARCELABLE_CLASS_ID, context)) {
                     reporter.reportOn(declaration.source, ScreenErrors.SCREEN_ARG_NOT_PARCELABLE)
                 }
+            } else {
+                // Warn when the arg class cannot be resolved (e.g., cross-module type, type alias).
+                reporter.reportOn(declaration.source, ScreenErrors.SCREEN_ARG_NOT_RESOLVABLE)
             }
         }
     }
