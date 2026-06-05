@@ -74,6 +74,6 @@ class ViewBindingSubplugin : KotlinCompilerPluginSupportPlugin {
     override fun getPluginArtifact(): SubpluginArtifact = SubpluginArtifact(
         groupId = "com.adkhambek",
         artifactId = "viewbinding-compiler",
-        version = "1.0-SNAPSHOT",
+        version = BuildConfig.VERSION,
     )
 }
