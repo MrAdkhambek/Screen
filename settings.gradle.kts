@@ -23,6 +23,7 @@ plugins {
 
 rootProject.name = "screen"
 include(":screen-annotations")
+include(":compiler-common")
 include(":screen-compiler")
 include(":viewbinding-compiler")
 //include(":app")

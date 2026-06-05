@@ -1,10 +1,9 @@
 // Package declaration for the FIR phase of the Screen compiler plugin.
 package com.adkhambek.screen.compiler.fir
 
+import com.adkhambek.compiler.common.SCREEN_ANNOTATION_FQ_NAME
 // Import DeclarationPredicate which defines a condition for matching FIR declarations.
 import org.jetbrains.kotlin.fir.extensions.predicate.DeclarationPredicate
-// Import FqName which represents a fully qualified name (e.g., "com.adkhambek.screen.Screen").
-import org.jetbrains.kotlin.name.FqName
 
 // Predicate that matches classes annotated with @com.adkhambek.screen.Screen.
 // This predicate is registered in the FirDeclarationPredicateRegistrar and used
@@ -13,5 +12,5 @@ import org.jetbrains.kotlin.name.FqName
 // so hasScreenAnnotation() checks are fast O(1) lookups after initial resolution.
 val screenPredicate = DeclarationPredicate.create {
     // Match any declaration annotated with the fully qualified @Screen annotation.
-    annotated(FqName("com.adkhambek.screen.Screen"))
+    annotated(SCREEN_ANNOTATION_FQ_NAME)
 }
