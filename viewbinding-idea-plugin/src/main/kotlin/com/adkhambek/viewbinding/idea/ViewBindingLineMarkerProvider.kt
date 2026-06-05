@@ -41,36 +41,39 @@ class ViewBindingLineMarkerProvider : LineMarkerProvider {
         Name.identifier("Screen"),
     )
 
-    // Called for each PSI element to determine if a gutter marker should be shown.
-    // Returns a LineMarkerInfo for the CLASS_KEYWORD of @Screen-annotated classes.
-    override fun getLineMarkerInfo(element: PsiElement): LineMarkerInfo<*>? {
-        // Only process leaf PSI elements (individual tokens).
-        val leaf = element as? LeafPsiElement ?: return null
-        // Only process the "class" keyword.
-        if (leaf.elementType != KtTokens.CLASS_KEYWORD) return null
-        // Navigate to the class declaration.
-        val ktClass = leaf.parent as? KtClass ?: return null
-        // Check for @Screen annotation.
-        if (!hasScreenAnnotation(ktClass)) return null
+    // Fast path: returns null so that no expensive work runs on every editor repaint.
+    // All analysis is deferred to collectSlowLineMarkers() which runs in the background.
+    override fun getLineMarkerInfo(element: PsiElement): LineMarkerInfo<*>? = null
 
-        // Tooltip text indicating the generated property.
-        val tooltip = "ViewBinding generated property: binding"
+    // Slow path: runs in a background thread. Filters elements with cheap PSI checks,
+    // applies a text-based annotation pre-check, then uses analyze{} only for candidates.
+    override fun collectSlowLineMarkers(
+        elements: MutableList<out PsiElement>,
+        result: MutableCollection<in LineMarkerInfo<*>>
+    ) {
+        for (element in elements) {
+            val leaf = element as? LeafPsiElement ?: continue
+            if (leaf.elementType != KtTokens.CLASS_KEYWORD) continue
+            val ktClass = leaf.parent as? KtClass ?: continue
+            // Cheap text-based pre-check: skip classes that don't even mention @Screen.
+            if (ktClass.annotationEntries.none { it.shortName?.asString() == "Screen" }) continue
+            // Full K2 resolution to confirm the annotation identity.
+            if (!hasScreenAnnotation(ktClass)) continue
 
-        // Create the gutter line marker.
-        return LineMarkerInfo(
-            leaf as PsiElement,
-            leaf.textRange,
-            // Plugin icon in the gutter.
-            AllIcons.Nodes.Plugin,
-            // Tooltip shown on hover.
-            { tooltip },
-            // No click navigation handler.
-            null,
-            // Align the icon to the right side of the gutter.
-            GutterIconRenderer.Alignment.RIGHT,
-            // Accessible name for screen readers.
-            { "ViewBinding @Screen" },
-        )
+            val tooltip = "ViewBinding generated property: binding"
+
+            result.add(
+                LineMarkerInfo(
+                    leaf as PsiElement,
+                    leaf.textRange,
+                    AllIcons.Nodes.Plugin,
+                    { tooltip },
+                    null,
+                    GutterIconRenderer.Alignment.RIGHT,
+                    { "ViewBinding @Screen" },
+                )
+            )
+        }
     }
 
     // Checks whether a class or object has the @Screen annotation using the Analysis API.
