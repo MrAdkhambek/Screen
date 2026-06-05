@@ -6,16 +6,16 @@
   <vendor>adkhambek</vendor>
   <description><![CDATA[IDE support for the Screen compiler plugin.
         <ul>
-            <li>Resolves generated <code>TAG</code> and <code>KEY</code> companion object constants for <code>@Screen</code>-annotated classes</li>
+            <li>Resolves generated <code>KEY</code> companion object constant for <code>@Screen</code>-annotated classes</li>
             <li>Gutter icon on <code>@Screen</code> classes showing generated constants</li>
-            <li>Quick documentation (Ctrl+Q) for generated <code>TAG</code> and <code>KEY</code> properties</li>
+            <li>Quick documentation (Ctrl+Q) for generated <code>KEY</code> property</li>
             <li>Inspection warning when manually defining constants that conflict with generated ones</li>
         </ul>]]></description>
   <change-notes><![CDATA[<b>1.0.0</b>
         <ul>
             <li>Bundled FIR compiler plugin provider for K2 analysis</li>
             <li>Gutter icon line marker for @Screen classes</li>
-            <li>Documentation provider for generated TAG and KEY properties</li>
+            <li>Documentation provider for generated KEY property</li>
             <li>Inspection for conflicting manual constant definitions</li>
         </ul>]]></change-notes>
   <depends>com.intellij.modules.platform</depends>
@@ -27,6 +27,6 @@
   <extensions defaultExtensionNs="com.intellij">
     <codeInsight.lineMarkerProvider language="kotlin" implementationClass="com.adkhambek.screen.idea.ScreenLineMarkerProvider" />
     <lang.documentationProvider language="kotlin" implementationClass="com.adkhambek.screen.idea.ScreenDocumentationProvider" />
-    <localInspection language="kotlin" shortName="ScreenManualConstant" displayName="Manual TAG/KEY conflicts with Screen generated constant" groupName="Screen" enabledByDefault="true" level="WARNING" implementationClass="com.adkhambek.screen.idea.ScreenManualConstantInspection" />
+    <localInspection language="kotlin" shortName="ScreenManualConstant" displayName="Manual KEY conflicts with Screen generated constant" groupName="Screen" enabledByDefault="true" level="WARNING" implementationClass="com.adkhambek.screen.idea.ScreenManualConstantInspection" />
   </extensions>
 </idea-plugin>
