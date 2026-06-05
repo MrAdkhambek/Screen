@@ -28,8 +28,9 @@ class ViewBindingSubplugin : KotlinCompilerPluginSupportPlugin {
     override fun apply(target: Project) {}
 
     // Determines whether this compiler plugin should be applied to a given compilation.
-    // Returns true for all compilations so ViewBinding generation is always active.
-    override fun isApplicable(kotlinCompilation: KotlinCompilation<*>): Boolean = true
+    // Only applies to main compilations to avoid unnecessary overhead in test compilations.
+    override fun isApplicable(kotlinCompilation: KotlinCompilation<*>): Boolean =
+        kotlinCompilation.name == KotlinCompilation.MAIN_COMPILATION_NAME
 
     // Provides CLI options to pass to the compiler plugin for each compilation.
     // Extracts the Android namespace from the Android Gradle plugin and passes it as

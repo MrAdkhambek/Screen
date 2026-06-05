@@ -28,8 +28,9 @@ class ScreenSubplugin : KotlinCompilerPluginSupportPlugin {
     override fun apply(target: Project) {}
 
     // Determines whether this compiler plugin should be applied to a given Kotlin compilation.
-    // Returns true for all compilations (main, test, etc.) so the Screen plugin is always active.
-    override fun isApplicable(kotlinCompilation: KotlinCompilation<*>): Boolean = true
+    // Only applies to main compilations to avoid unnecessary overhead in test compilations.
+    override fun isApplicable(kotlinCompilation: KotlinCompilation<*>): Boolean =
+        kotlinCompilation.name == KotlinCompilation.MAIN_COMPILATION_NAME
 
     // Provides CLI options to pass to the compiler plugin for each compilation.
     // The Screen plugin does not require any CLI options, so this returns an empty list.
